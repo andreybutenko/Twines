@@ -186,6 +186,80 @@ var saveAs=saveAs||navigator.msSaveBlob&&navigator.msSaveBlob.bind(navigator)||f
   color: black;
   flex-direction: column;
   justify-content: center;
+}
+
+#pano-view {
+  position: relative;
+  width: 800px;
+  height: 600px;
+  background-image: url('http://andrey.ninja/earthgames/painted-hills-pano.jpg');
+  background-repeat: repeat-x;
+  background-size: cover;
+  background-position-x: 20px;
+  transition: all 1s;
+}
+
+#pano-view #pano-map {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 300px;
+}
+
+#pano-view .compass {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 100px;
+  height: 100px;
+  background-image: url('http://andrey.ninja/earthgames/compass-bg.png');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.compass #compass-pointer {
+  background-image: url('http://andrey.ninja/earthgames/compass-fg.png');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  width: 100%;
+  height: 100%;
+  transition: all 1s;
+}
+
+.control-container {
+  display: flex;
+  width: 800px;
+}
+
+.control-container div {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  cursor: pointer;
+  padding: 16px;
+  transition: all 100ms;
+  user-select: none;
+}
+
+.control-container div:hover {
+  background-color: #ccc;
+}
+
+.control-container div img {
+  width: 50px;
+  height: 50px;
+}
+
+#success-popup {
+  display: none;
+  background-color: rgba(46, 204, 113, 0.5);
+  width: 100%;
+  height: 100%;
+  justify-content: center;
+  align-items: center;
+  transition: all 250ms;
 }</style><script role="script" id="twine-user-script" type="text/twine-javascript">window.createHotImage = function(id, zones) {
   const element = document.getElementById(id);
 	if(element != null) {
@@ -243,8 +317,7 @@ window.onRender = function(event) {
 
 </script><tw-passagedata pid="1" name="Start" tags="" position="133,8">Welcome, choose your person.
 [[Claire|Claire]]
-[[Izzy|Izzy]]
-[[Testing Passage|Testing Passage]]</tw-passagedata><tw-passagedata pid="2" name="Claire" tags="" position="249,113">Claire forgot to pack the night before. And she slept in! Help Claire find her things! How many can you find in 30 seconds before the bus leaves for Camp Crescent?
+[[Izzy|Izzy]]</tw-passagedata><tw-passagedata pid="2" name="Claire" tags="" position="249,113">Claire forgot to pack the night before. And she slept in! Help Claire find her things! How many can you find in 30 seconds before the bus leaves for Camp Crescent?
 [[Start|Pack Fast]]</tw-passagedata><tw-passagedata pid="3" name="Izzy" tags="" position="8,136">Izzy was so excited to go to Camp he packed the night before. Included in his backpack are:
 
 Gloves
@@ -261,7 +334,68 @@ He&#x27;s ready to [[get on the bus|Bus]]</tw-passagedata><tw-passagedata pid="4
 [[The Visitor Center|Visitor Center]]
 [[A Trailhead|Trailhead]]
 
-Where do you want to go?</tw-passagedata><tw-passagedata pid="6" name="Cabins" tags="" position="77,714">Double-click this passage to edit it.</tw-passagedata><tw-passagedata pid="7" name="Visitor Center" tags="" position="228,714">Double-click this passage to edit it.</tw-passagedata><tw-passagedata pid="8" name="Trailhead" tags="" position="378,714">Double-click this passage to edit it.</tw-passagedata><tw-passagedata pid="9" name="Testing Passage" tags="" position="742,112">&lt;img id=&quot;test-passage-img&quot; src=&quot;https://media-cdn.tripadvisor.com/media/photo-s/06/3c/22/81/cabin-with-a-campfire.jpg&quot; /&gt;
+Where do you want to go?</tw-passagedata><tw-passagedata pid="6" name="Cabins" tags="" position="77,714">Double-click this passage to edit it.</tw-passagedata><tw-passagedata pid="7" name="Visitor Center" tags="" position="228,714">Double-click this passage to edit it.</tw-passagedata><tw-passagedata pid="8" name="Trailhead" tags="" position="378,714">&lt;div class=&quot;trailhead no-br&quot;&gt;
+  &lt;div id=&quot;pano-view&quot;&gt;
+	&lt;img id=&quot;pano-map&quot; src=&quot;http://andrey.ninja/earthgames/painted-hills-map.png&quot; /&gt;
+	&lt;div class=&quot;compass&quot;&gt;
+	  &lt;div id=&quot;compass-pointer&quot;&gt;&lt;/div&gt;
+	&lt;/div&gt;
+	&lt;div id=&quot;success-popup&quot;&gt;
+	  &lt;img src=&quot;http://andrey.ninja/earthgames/success.png&quot; /&gt;
+	&lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;control-container&quot;&gt;
+	&lt;div id=&quot;control-left&quot;&gt;&lt;img src=&quot;http://andrey.ninja/earthgames/left.png&quot; /&gt;&lt;/div&gt;
+	&lt;div id=&quot;control-right&quot;&gt;&lt;img src=&quot;http://andrey.ninja/earthgames/right.png&quot; /&gt;&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;&lt;script&gt;&gt;
+  window.onRender(function() {
+	const panoView = document.getElementById(&#x27;pano-view&#x27;);
+	const compassPointer = document.getElementById(&#x27;compass-pointer&#x27;);
+	const successPopup = document.getElementById(&#x27;success-popup&#x27;);
+	const leftControl = document.getElementById(&#x27;control-left&#x27;);
+	const rightControl = document.getElementById(&#x27;control-right&#x27;);
+	let rotation = 0;
+	const stepDeg = 45;
+	const originalImageHeight = 2616;
+	const originalImageWidth = 14848;
+	const panoOffsetDeg = 135;
+	const successRange = [315, 360];
+
+	const scaledImageWidth = originalImageWidth * (600 / originalImageHeight);
+	const degPxRatio = scaledImageWidth / 360;
+
+	function setPanoRotation(newRotation) {
+	  rotation = newRotation;
+	  panoView.style.backgroundPositionX = (-1 * (rotation + panoOffsetDeg) * degPxRatio) + &#x27;px&#x27;;
+	  compassPointer.style.transform = &#x27;rotate(&#x27; + rotation + &#x27;deg)&#x27;;
+	}
+
+	function attemptNavigation() {
+	  let normalizedRotation = rotation;
+	  if(rotation &gt; 360) normalizedRotation = rotation % 360;
+	  else if(rotation &lt; 360) normalizedRotation = rotation % 360;
+	  if(normalizedRotation == 0) normalizedRotation = 360;
+
+	  if(normalizedRotation &gt;= successRange[0] &amp;&amp; normalizedRotation &lt;= successRange[1]) {
+		flashSuccess();
+	  }
+	}
+
+	function flashSuccess() {
+	  successPopup.style.display = &#x27;flex&#x27;;
+	  setTimeout(() =&gt; successPopup.style.display = &#x27;none&#x27;, 500);
+	}
+
+	setPanoRotation(180);
+
+	leftControl.onclick = () =&gt; setPanoRotation(rotation - stepDeg);
+	rightControl.onclick = () =&gt; setPanoRotation(rotation + stepDeg);
+	panoView.onclick = attemptNavigation;
+  })
+&lt;&lt;/script&gt;&gt;</tw-passagedata><tw-passagedata pid="9" name="Testing Passage" tags="" position="742,112">&lt;img id=&quot;test-passage-img&quot; src=&quot;https://media-cdn.tripadvisor.com/media/photo-s/06/3c/22/81/cabin-with-a-campfire.jpg&quot; /&gt;
 
 &lt;&lt;script&gt;&gt;
   window.onRender(function() {
